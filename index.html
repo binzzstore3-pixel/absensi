@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Absensi Sederhana</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 30px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 25px;
+        }
+
+        .tanggal-waktu {
+            text-align: center;
+            background: #f0f4ff;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-size: 16px;
+            color: #2d3748;
+            font-weight: 500;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #444;
+            font-weight: 500;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-hapus {
+            background: #e53e3e;
+            margin-top: 20px;
+        }
+
+        h2 {
+            margin-top: 30px;
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 18px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+        }
+
+        th {
+            background: #f7fafc;
+            color: #4a5568;
+        }
+
+        .status-masuk { color: #38a169; font-weight: 600; }
+        .status-pulang { color: #3182ce; font-weight: 600; }
+        .status-izin { color: #d69e2e; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📋 Absensi Online</h1>
+
+        <!-- Tampilkan Tanggal & Waktu Real-time -->
+        <div class="tanggal-waktu" id="tanggalWaktu"></div>
+
+        <!-- Form Absensi -->
+        <form id="formAbsensi">
+            <div class="form-group">
+                <label for="nama">Nama Lengkap</label>
+                <input type="text" id="nama" placeholder="Masukkan nama kamu..." required>
+            </div>
+
+            <div class="form-group">
+                <label for="nis">NIS / NIP / ID</label>
+                <input type="text" id="nis" placeholder="Contoh: 123456" required>
+            </div>
+
+            <div class="form-group">
+                <label for="status">Status Kehadiran</label>
+                <select id="status" required>
+                    <option value="">-- Pilih Status --</option>
+                    <option value="Masuk">✅ Masuk</option>
+                    <option value="Pulang">🏠 Pulang</option>
+                    <option value="Izin">📝 Izin</option>
+                    <option value="Sakit">🏥 Sakit</option>
+                    <option value="Alfa">❌ Alfa</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn">✅ Simpan Absensi</button>
+        </form>
+
+        <!-- Riwayat Absensi -->
+        <h2>📊 Riwayat Absensi</h2>
+        <table id="tabelRiwayat">
+            <thead>
+                <tr>
+                    <th>Tanggal</th>
+                    <th>Waktu</th>
+                    <th>Nama</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="isiRiwayat">
+                <!-- Data akan muncul di sini -->
+            </tbody>
+        </table>
+
+        <button class="btn btn-hapus" onclick="hapusSemuaData()">🗑️ Hapus Semua Riwayat</button>
+    </div>
+
+    <script>
+        // === UPDATE WAKTU REAL-TIME ===
+        function updateWaktu() {
+            const sekarang = new Date();
+            const opsi = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
+            const tgl = sekarang.toLocaleDateString('id-ID', opsi);
+            const jam = sekarang.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+            document.getElementById('tanggalWaktu').innerText = `${tgl} | ${jam}`;
+        }
+        setInterval(updateWaktu, 1000);
+        updateWaktu();
+
+        // === AMBIL DATA DARI LOCALSTORAGE ===
+        function ambilData() {
+            return JSON.parse(localStorage.getItem('dataAbsensi')) || [];
+        }
+
+        // === SIMPAN DATA KE LOCALSTORAGE ===
+        function simpanData(data) {
+            localStorage.setItem('dataAbsensi', JSON.stringify(data));
+        }
+
+        // === TAMPILKAN RIWAYAT KE TABEL ===
+        function tampilkanRiwayat() {
+            const data = ambilData();
+            const tbody = document.getElementById('isiRiwayat');
+            tbody.innerHTML = '';
+
+            // Urutkan dari yang terbaru di atas
+            data.reverse().forEach(item => {
+                const baris = document.createElement('tr');
+                baris.innerHTML = `
+                    <td>${item.tanggal}</td>
+                    <td>${item.waktu}</td>
+                    <td>${item.nama}<br><small>${item.nis}</small></td>
+                    <td class="status-${item.status.toLowerCase()}">${item.status}</td>
+                `;
+                tbody.appendChild(baris);
+            });
+        }
+
+        // === KETIKA FORM DIKIRIM ===
+        document.getElementById('formAbsensi').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const nama = document.getElementById('nama').value;
+            const nis = document.getElementById('nis').value;
+            const status = document.getElementById('status').value;
+            const sekarang = new Date();
+            const tanggal = sekarang.toLocaleDateString('id-ID');
+            const waktu = sekarang.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' });
+
+            const data = ambilData();
+            data.push({ nama, nis, status, tanggal, waktu });
+            simpanData(data);
+
+            alert(`✅ Absen Berhasil!\nNama: ${nama}\nStatus: ${status}\nWaktu: ${tanggal} ${waktu}`);
+            
+            // Reset form & tampilkan ulang riwayat
+            this.reset();
+            tampilkanRiwayat();
+        });
+
+        // === HAPUS SEMUA DATA ===
+        function hapusSemuaData() {
+            if (confirm('Yakin mau hapus SEMUA riwayat absensi?')) {
+                localStorage.removeItem('dataAbsensi');
+                tampilkanRiwayat();
+            }
+        }
+
+        // === TAMPILKAN DATA SAAT HALAMAN DIBUKA ===
+        tampilkanRiwayat();
+    </script>
+</body>
+</html>
